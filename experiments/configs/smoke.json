@@ -1,0 +1,8 @@
+{
+  "families": ["sparse", "dense", "layered", "bottleneck"],
+  "sizes": [16, 32],
+  "seeds": [1, 2, 3],
+  "capacity_max": 100,
+  "repetitions": 2,
+  "timeout_seconds": 10
+}

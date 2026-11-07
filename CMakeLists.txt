@@ -1,0 +1,27 @@
+cmake_minimum_required(VERSION 3.16)
+project(maxflow_comparison LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+add_library(maxflow
+    src/common/graph.cpp
+    src/common/io.cpp
+    src/common/verify.cpp
+    src/algorithms/edmonds_karp.cpp
+    src/algorithms/push_relabel.cpp)
+target_include_directories(maxflow PUBLIC include)
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(maxflow PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+add_executable(maxflow_run src/main.cpp)
+target_link_libraries(maxflow_run PRIVATE maxflow)
+include(CTest)
+if(BUILD_TESTING)
+    add_executable(maxflow_tests tests/test_maxflow.cpp)
+    target_link_libraries(maxflow_tests PRIVATE maxflow)
+    add_test(NAME framework COMMAND maxflow_tests framework)
+    foreach(algorithm edmonds_karp push_relabel)
+        add_test(NAME ${algorithm} COMMAND maxflow_tests ${algorithm})
+        set_tests_properties(${algorithm} PROPERTIES SKIP_RETURN_CODE 77)
+    endforeach()
+endif()

@@ -1,0 +1,7 @@
+/build*/
+/results/*
+!/results/.gitkeep
+/experiments/instances/*
+!/experiments/instances/.gitkeep
+__pycache__/
+.DS_Store
