@@ -3,9 +3,10 @@
 A shared C++17 framework for comparing Edmonds–Karp (primary author: **Sam**)
 and FIFO push–relabel (primary author: **Dima**).
 
-**Status:** infrastructure only. Both solver modules deliberately throw
-`NotImplemented`. No max-flow algorithm has been implemented. Benchmarks mark
-these runs `not_implemented`, and CTest marks their suites skipped.
+**Status:** FIFO push–relabel is implemented, including current-edge pointers
+and full excess discharge. Edmonds–Karp remains a placeholder: its benchmark
+runs are `not_implemented`, and its CTest suite is skipped.
+See [push–relabel implementation notes](docs/PUSH_RELABEL.md).
 
 ## Build and check
 
@@ -83,6 +84,12 @@ Each solver suite checks hand cases, stranded excess, capacities exceeding
 graphs. An independent exhaustive minimum-cut oracle establishes the expected
 answer; capacity, conservation, terminal balance, and a cut certificate are also
 checked. A placeholder skips its suite; implemented solvers must pass it.
+
+An additional push–relabel suite covers signed 64-bit capacity limits, parallel
+and antiparallel edges, unreachable sinks, cyclic bottlenecks, and long dead-end
+chains. It also exhaustively checks all 4,096 simple directed unit-capacity
+graphs on four vertices with all 12 terminal pairs (49,152 cases), solving each
+twice with a reset between runs and checking against exhaustive minimum cuts.
 
 ```sh
 ctest --test-dir build -R edmonds_karp --output-on-failure
