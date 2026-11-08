@@ -37,7 +37,7 @@ relabeling has a residual neighbor available, and excess trapped away from the
 sink can eventually return to the source. The solver explicitly checks this
 neighbor invariant rather than wrapping a height sentinel if it is violated.
 
-The FIFO policy has the standard `O(V^3)` worst-case time bound. Algorithm-local
+On simple graphs the FIFO policy has the standard `O(V^3)` worst-case time bound. Algorithm-local
 storage is `O(V)` in addition to the shared `O(V + E)` residual graph. This is the
 baseline variant: no global relabeling, gap heuristic, or highest-label policy.
 Keep any future heuristic version separately selectable for comparisons.
@@ -61,6 +61,7 @@ The existing 250 seeded random cases use exhaustive minimum-cut answers. The
 additional exhaustive suite covers every simple directed unit-capacity graph
 on four vertices and every distinct terminal pair. Every successful solve also
 passes the independent feasible-flow and minimum-cut certificate verifier.
-The smoke experiment must have 48 verified push–relabel rows; the other 48 rows
-remain unfinished until Sam implements Edmonds–Karp. These are correctness and
-pipeline checks, not evidence for performance conclusions.
+The smoke experiment has 48 verified rows for each implemented algorithm.
+These are correctness and pipeline checks, not evidence for performance
+conclusions. See the [full experiment results](../experiments/RESULTS.md) for the
+paired performance comparison and its limitations.
