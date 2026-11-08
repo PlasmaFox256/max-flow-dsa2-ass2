@@ -1,0 +1,10 @@
+{
+  "families": ["disjoint_paths"],
+  "sizes": [4, 6, 8, 12, 16, 24, 32],
+  "seeds": [11, 22, 33, 44, 55],
+  "capacity_max": 100,
+  "repetitions": 7,
+  "target_seconds": 0.01,
+  "timeout_seconds": 30,
+  "order_seed": 20261109
+}

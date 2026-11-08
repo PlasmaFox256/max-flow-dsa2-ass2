@@ -1,6 +1,9 @@
 /build*/
 /results/*
 !/results/.gitkeep
+!/results/comparison/
+!/results/crossover/
+!/results/cut-control/
 /experiments/instances/*
 !/experiments/instances/.gitkeep
 __pycache__/

@@ -3,9 +3,9 @@
 A shared C++17 framework for comparing Edmonds–Karp (primary author: **Sam**)
 and FIFO push–relabel (primary author: **Dima**).
 
-**Status:** FIFO push–relabel is implemented, including current-edge pointers
-and full excess discharge. Edmonds–Karp remains a placeholder: its benchmark
-runs are `not_implemented`, and its CTest suite is skipped.
+**Status:** Both algorithms are implemented and pass the shared and exhaustive
+correctness tests. FIFO push–relabel includes current-edge pointers and full
+excess discharge, without global-relabel or gap heuristics.
 See [push–relabel implementation notes](docs/PUSH_RELABEL.md).
 
 ## Build and check
@@ -129,6 +129,53 @@ Metadata records the executable hash, platform, configuration, and command.
 For final experiments, also preserve compiler/version, CMake settings, CPU model,
 and revision manually. Use the same Release binary and machine for comparisons.
 Very short solves need future batching before their timings are meaningful.
+
+## Full comparison experiment
+
+The final design compares six graph families at six sizes, with five seeds and
+five process repetitions per algorithm: **180 inputs and 1,800 measurement
+batches**. Separate follow-ups examine the short-path crossover and a controlled
+change from source-limited to sink-limited capacity. Read the
+[experiment plan](experiments/PLAN.md) for hypotheses, graph definitions,
+warm-up, timing boundaries, variation, and limitations.
+
+Reproduce all experiments in a **new** output directory:
+
+```sh
+bash scripts/reproduce_experiment.sh results/reproduced
+```
+
+No Python packages are needed. Do not run other benchmarks or compilation while
+measurement is running. The script builds with Release optimizations, runs the
+correctness tests, then executes all measurement processes sequentially. It
+refuses to overwrite an existing raw CSV. Timing results vary with hardware and
+system load. Set `MAXFLOW_HARDWARE_INFO` to your own CPU/RAM JSON file if sandbox
+restrictions prevent automatic hardware collection; the submitted run uses
+`experiments/hardware/apple-m2.json`.
+
+Submitted data and analysis:
+
+- [Main raw CSV](results/comparison/raw.csv), [paired seed results](results/comparison/paired.csv),
+  and [plot-ready summary](results/comparison/summary.csv).
+- [Crossover summary](results/crossover/summary.csv) and
+  [terminal-cut control summary](results/cut-control/summary.csv); their raw data
+  and metadata are in the same directories.
+- Each directory includes `instances.csv` with exact input hashes,
+  `structure.csv` with graph diagnostics, and `raw.metadata.json` with compiler,
+  flags, hardware, revision/source hashes, binary hash and run settings.
+- [Results and interpretation](experiments/RESULTS.md).
+
+`seconds` in raw CSV is the mean solver time within one measured batch.
+`paired.csv` takes the median across process repetitions for each seed and
+algorithm. `summary.csv` reports medians across seeds and the geometric mean of
+paired **EK/PR** ratios: above 1 favors push–relabel, below 1 favors Edmonds–Karp.
+The two aggregate median times need not divide to that geometric mean. Plot
+vertex count against the median seconds, one series per algorithm and one panel
+per family; show seed-level points or ranges so input sensitivity remains visible.
+
+Generated inputs remain ignored and are regenerated deterministically; submitted
+CSV/metadata directories are explicitly included in Git. The original smoke
+runner remains available for quick pipeline checks.
 
 ## Layout
 

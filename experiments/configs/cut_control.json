@@ -1,0 +1,10 @@
+{
+  "families": ["source_limited_dense", "sink_limited_dense"],
+  "sizes": [64, 256, 512],
+  "seeds": [11, 22, 33],
+  "capacity_max": 100,
+  "repetitions": 3,
+  "target_seconds": 0.01,
+  "timeout_seconds": 30,
+  "order_seed": 20261110
+}
