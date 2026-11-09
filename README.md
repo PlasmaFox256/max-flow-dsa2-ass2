@@ -10,7 +10,9 @@ See [push–relabel implementation notes](docs/PUSH_RELABEL.md).
 
 ## Build and check
 
-Requirements: a C++17 compiler, CMake 3.16+, and Python 3. No external libraries.
+Requirements: a C++17 compiler, CMake 3.16+, and Python 3. The C++ code and
+experiment runners require no external libraries. Plotting requires pandas and
+Matplotlib (`python3 -m pip install pandas matplotlib`, preferably in a virtual environment).
 Run from the repository root:
 
 ```sh
@@ -35,8 +37,8 @@ Read [the collaboration contract](docs/IMPLEMENTATION_CONTRACT.md) first.
 - Dima edits `src/algorithms/push_relabel.cpp` and any algorithm-specific helpers.
 - Shared headers, graph storage, parsing, verifier, and benchmark format are the
   agreed boundary. Discuss changes to these before making them.
-- Each author replaces their placeholder body while preserving the signature.
-  Tests and benchmark registration already exist; no shared-file edit is needed.
+- Preserve the solver signatures when changing implementations. Tests and
+  benchmark registration already exist.
 
 Suggested branches: `sam/edmonds-karp` and `dima/push-relabel`, both based on the
 same framework commit. Merge small changes after the relevant tests pass.
@@ -85,9 +87,10 @@ graphs. An independent exhaustive minimum-cut oracle establishes the expected
 answer; capacity, conservation, terminal balance, and a cut certificate are also
 checked. A placeholder skips its suite; implemented solvers must pass it.
 
-An additional push–relabel suite covers signed 64-bit capacity limits, parallel
+Dedicated Edmonds–Karp and push–relabel suites cover signed 64-bit capacity limits, parallel
 and antiparallel edges, unreachable sinks, cyclic bottlenecks, and long dead-end
-chains. It also exhaustively checks all 4,096 simple directed unit-capacity
+chains. The Edmonds–Karp suite also checks rerouting through reverse edges.
+Each suite exhaustively checks all 4,096 simple directed unit-capacity
 graphs on four vertices with all 12 terminal pairs (49,152 cases), solving each
 twice with a reset between runs and checking against exhaustive minimum cuts.
 
@@ -128,7 +131,7 @@ smoke test, not a sufficient final experiment design.
 Metadata records the executable hash, platform, configuration, and command.
 For final experiments, also preserve compiler/version, CMake settings, CPU model,
 and revision manually. Use the same Release binary and machine for comparisons.
-Very short solves need future batching before their timings are meaningful.
+For repeated measurements, use `maxflow_bench` and the full experiment runner below.
 
 ## Full comparison experiment
 
@@ -145,7 +148,7 @@ Reproduce all experiments in a **new** output directory:
 bash scripts/reproduce_experiment.sh results/reproduced
 ```
 
-No Python packages are needed. Do not run other benchmarks or compilation while
+The experiment runner needs only the Python standard library. Do not run other benchmarks or compilation while
 measurement is running. The script builds with Release optimizations, runs the
 correctness tests, then executes all measurement processes sequentially. It
 refuses to overwrite an existing raw CSV. Timing results vary with hardware and
@@ -153,29 +156,65 @@ system load. Set `MAXFLOW_HARDWARE_INFO` to your own CPU/RAM JSON file if sandbo
 restrictions prevent automatic hardware collection; the submitted run uses
 `experiments/hardware/apple-m2.json`.
 
-Submitted data and analysis:
+Generated results and graph inputs are not bundled with this checkout. Regenerate
+measurements on the machine whose environment you report. The historical
+[results discussion](experiments/RESULTS.md) describes the earlier Apple M2 run;
+its timing claims do not describe a newly generated run.
 
-- [Main raw CSV](results/comparison/raw.csv), [paired seed results](results/comparison/paired.csv),
-  and [plot-ready summary](results/comparison/summary.csv).
-- [Crossover summary](results/crossover/summary.csv) and
-  [terminal-cut control summary](results/cut-control/summary.csv); their raw data
-  and metadata are in the same directories.
-- Each directory includes `instances.csv` with exact input hashes,
-  `structure.csv` with graph diagnostics, and `raw.metadata.json` with compiler,
-  flags, hardware, revision/source hashes, binary hash and run settings.
-- [Results and interpretation](experiments/RESULTS.md).
+To run only the main comparison using your existing Release build:
 
-`seconds` in raw CSV is the mean solver time within one measured batch.
-`paired.csv` takes the median across process repetitions for each seed and
-algorithm. `summary.csv` reports medians across seeds and the geometric mean of
-paired **EK/PR** ratios: above 1 favors push–relabel, below 1 favors Edmonds–Karp.
-The two aggregate median times need not divide to that geometric mean. Plot
-vertex count against the median seconds, one series per algorithm and one panel
-per family; show seed-level points or ranges so input sensitivity remains visible.
+```sh
+python3 scripts/run_experiment.py --binary build/maxflow_bench \
+  --config experiments/configs/comparison.json --output results/comparison/raw.csv
+python3 scripts/summarize_experiment.py results/comparison/raw.csv
+python3 scripts/describe_instances.py results/comparison
+python3 scripts/plot_results.py results/comparison/raw.csv
+```
 
-Generated inputs remain ignored and are regenerated deterministically; submitted
-CSV/metadata directories are explicitly included in Git. The original smoke
-runner remains available for quick pipeline checks.
+The runner generates graph inputs automatically. It writes raw measurements,
+`instances.csv` with input hashes, and `raw.metadata.json` with build, hardware,
+source and run information. Summarization produces `paired.csv` and `summary.csv`;
+instance description produces `structure.csv`. Use a new destination for later
+runs because existing raw CSVs are protected against overwriting.
+
+For a single graph file, benchmark either algorithm directly:
+
+```sh
+./build/maxflow_bench edmonds_karp path/to/instance.txt 0.01
+./build/maxflow_bench push_relabel path/to/instance.txt 0.01
+```
+
+The final argument is the target accumulated solver time in seconds (greater
+than zero and at most one). Each process performs a verified untimed warm-up,
+then measures solves until that target or 1,024 iterations. Reset and
+verification are outside each timed interval. JSON output includes flow,
+iterations, total solver seconds and mean seconds per solve.
+
+### Plots and aggregation
+
+```sh
+python3 scripts/plot_results.py results/comparison/raw.csv
+# Optional output base and image format:
+python3 scripts/plot_results.py results/comparison/raw.csv --output results/comparison/timing.svg
+```
+
+The plotting script also accepts `results/smoke.csv`. It saves separate timing
+and speedup images for each graph family, plus `.summary.csv` and `.speedup.csv`
+files. For example, the default main-comparison output includes
+`raw_plot_sparse.png` and `raw_plot_sparse_speedup.png`.
+
+`seconds` in a raw CSV is the arithmetic mean within one process. Timing plots
+use the median across process repetitions for each seed, then the median across
+seeds, with a min–max band across seed medians. Speedup plots first divide
+Edmonds–Karp time by push–relabel time for each matched seed, then plot the median
+ratio and min–max range. Above one favors push–relabel; below one favors
+Edmonds–Karp. Shading shows observed spread, not a confidence interval.
+The summarizer separately reports a geometric mean of paired ratios; it need
+not equal the plotted median speedup.
+
+Generated graph inputs are ignored by Git. Most results directories are ignored,
+but `results/comparison`, `results/crossover`, and `results/cut-control` are allowed
+so selected raw CSVs, metadata and figures can be committed with a report.
 
 ## Layout
 
@@ -184,10 +223,13 @@ include/maxflow/             Shared graph, solver, I/O, verification contracts
 src/algorithms/              Separately owned implementation modules
 src/common/                  Shared framework
 src/main.cpp                 Timed, verified single-run executable
+src/benchmark.cpp            Repeated, verified solver timing
 tests/test_maxflow.cpp       Framework tests and independent solver checks
-scripts/benchmark.py         Generation and CSV experiment runner
+scripts/benchmark.py         Quick smoke experiment runner
+scripts/run_experiment.py    Repeated full experiment runner
+scripts/plot_results.py      Per-family timing and speedup figures
 experiments/configs/         Versioned experiment configurations
 experiments/instances/       Generated reproducible inputs (ignored)
-results/                    Generated CSV and metadata (ignored)
+results/                    Generated measurements, metadata and plots
 docs/IMPLEMENTATION_CONTRACT.md  Team agreement
 ```
